@@ -2,7 +2,7 @@
   "manifest_version": 2,
 
   "name": "reCaptcha Solver",
-  "description": "This extension allows the user to change the background color of the current page.",
+  "description": "This extension allows the user to let Googles solve their own reCaptcha with their Vision API.",
   "version": "1.0",
 
   "browser_action": {
@@ -15,7 +15,8 @@
   "content_scripts": [
     {
       "matches": ["*://*/*"],
-      "js": ["jquery.js"]
+      "js": ["jquery.js", "solver.js"],
+      "all_frames": true
     }
   ],
   "permissions": [

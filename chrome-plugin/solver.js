@@ -1,75 +1,143 @@
-var iframe = $("iframe[src*='https://www.google.com/recaptcha']").contents()
-
 function clickNotRobot() {
-  var checkbox = iframe.find('.recaptcha-checkbox')
-  checkbox.click()
+  // console.log("Try to click on the checkbox \"I'm not a robot\"...")
+
+  var checkbox = $('.recaptcha-checkbox')
+  if (checkbox.length) {
+    checkbox.click()
+    console.log("✅ Checkbox was clicked!")
+  } else {
+    // console.log("❌ Checkbox not found!")
+  }
+}
+
+function clickReload(callback) {
+  var reload = $('.reload-button-holder button')
+  if (reload.length) {
+    reload.click()
+    setTimeout(callback, 1000)
+  }
+}
+
+function clickValidate() {
+  var button = $('.verify-button-holder button')
+  if (button.length) {
+    button.click()
+  }
 }
 
 function getCaptchaUrl() {
-  var src = iframe.find('img[class^=rc-image-tile-]').attr('src')
-  return src
+  // console.log("Try to find the reCaptcha image...")
+
+  var image = $('img[class^=rc-image-tile-]')
+  if (image.length) {
+    console.log("✅ reCaptcha image was found!")
+    return image.attr('src')
+  } else {
+    // console.log("❌ reCaptcha image not found!")
+    return null
+  }
 }
 
 function getTerm() {
-  var container = null
+  // console.log("Try to find the term...")
 
-  var container1 = iframe.find('.rc-imageselect-desc-wrapper .rc-imageselect-desc')
-  var container2 = iframe.find('.rc-imageselect-desc-wrapper .rc-imageselect-desc-no-canonical')
-
-  if(container1.length) {
-    container = container1
-
-  } else if(container2.length) {
-    container = container2
-
+  var container = $('[class^=rc-imageselect-desc]')
+  if (container.length) {
+    var term = container.find('strong').html()
+    console.log("✅ Term was found: " + term)
+    return term
   } else {
-    return null
+    // console.log("❌ Term not found!")
   }
-
-  var term = container.find('strong').html()
-  return term;
 }
 
-function parseTerm(term) {
-  var terms = new Array()
-  terms = term.split(' or ')
-  return terms
+function parseTerm(term, whitelist) {
+  var terms = whitelist[term]
+  if (typeof(terms) == 'undefined') {
+    return []
+  } else {
+    return terms
+  }
+
+  // if (whitelist[term] && whitelist[term] == true) {
+  //   return whitelist[term]
+  // } else {
+  //   return []
+  // }
+  // console.log(whitelist[term] && whitelist[term] == true)
+  // return whitelist[term]
+
+  // if (term in whitelist) {
+  //   return whitelist[term]
+  // } else {
+  //   return []
+  // }
 }
 
 function getGrid() {
-  var container = iframe.find('table[class^=rc-imageselect-table-]')
-  var className = container.attr('class')
-  var tableSizeString = className.slice(-2)
-  var rows = tableSizeString.charAt(0)
-  var columns = tableSizeString.charAt(1)
-  var tableSize = {
-    'rows': rows,
-    'columns': columns
+  // console.log("Try to find the grid...")
+
+  var container = $('table[class^=rc-imageselect-table-]')
+  if (container.length) {
+    var className = container.attr('class')
+    var tableSizeString = className.slice(-2)
+    var rows = tableSizeString.charAt(0)
+    var columns = tableSizeString.charAt(1)
+    var tableSize = {
+      'rows': rows,
+      'columns': columns
+    }
+    console.log("✅ Grid was found! Rows: " + rows + ", columns: " + columns)
+    return tableSize
+  } else {
+    // console.log("❌ Grid not found!")
+    return null
+  }
+}
+
+function recognize(whitelist) {
+  if (whitelist.lenght == 0) {
+    return
   }
 
-  return tableSize
-}
+  if (location.href.startsWith("https://www.google.com/recaptcha/api2/bframe?") == false) {
+    return
+  }
 
-function recognize() {
-  var captchaUrl = getCaptchaUrl()
-  var tableSize = getGrid()
   var term = getTerm()
-  var terms = parseTerm(term)
-  console.log(captchaUrl)
+  var terms = parseTerm(term, whitelist)
+  if (terms.length == 0) {
+    setTimeout(clickReload, 1000)
+    setTimeout(function() {
+      recognize(whitelist)
+    }, 2000)
+  } else {
+    var captchaUrl = getCaptchaUrl()
 
-  var rows = tableSize["rows"]
-  var columns = tableSize["columns"]
+    var tableSize = getGrid()
+    if (tableSize) {
+      var rows = tableSize["rows"]
+      var columns = tableSize["columns"]
+    }
 
-  request(captchaUrl, rows, columns, terms)
+    if (captchaUrl, rows, columns, terms) {
+      console.log(terms)
+      request(captchaUrl, rows, columns, terms)
+    }
+  }
 }
 
-function click(row, column) {
+function clickTile(row, column) {
   row += 1
   column += 1
-  iframe.find('table[class^=rc-imageselect-table-] tbody tr:nth-child(' + row + ') td:nth-child(' + column + ')').click()
+  $('table[class^=rc-imageselect-table-] tbody tr:nth-child(' + row + ') td:nth-child(' + column + ')').click()
 }
 
 function request(url, rows, columns, terms) {
+  if (url == null) {
+    return
+  }
+
   var getUrlParameter = function getUrlParameter(url, sParam) {
     var sPageURL = decodeURIComponent(url),
     sURLVariables = sPageURL.split(/\?|&/),
@@ -92,13 +160,18 @@ function request(url, rows, columns, terms) {
   }).done(function(data) {
     console.log(data)
     //var jsonData = jQuery.parseJSON(data)
-      data.forEach(function(obj) {
-        if(obj.isCorrectImage) {
-          click(obj.row, obj.column)
-        }
-      })
+    data.forEach(function(obj) {
+      if(obj.isCorrectImage) {
+        clickTile(obj.row, obj.column)
+      }
+    })
+    setTimeout(clickValidate, 1000)
   })
 }
 
-setTimeout(clickNotRobot, 1000)
-setTimeout(recognize, 4000)
+chrome.runtime.sendMessage({from: "load_json"}, function(response) {
+  clickNotRobot()
+  setTimeout(function() { recognize(response) }, 1000)
+});
+
+
