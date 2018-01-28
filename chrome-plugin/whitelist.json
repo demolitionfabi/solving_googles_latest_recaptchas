@@ -1,0 +1,63 @@
+{
+  "vehicles": [
+    "vehicle",
+    "land vehicle",
+    "car",
+    "motorcycle",
+    "motor vehicle"
+  ],
+
+  "cars": [
+    "car",
+    "vehicle",
+    "land vehicle"
+  ],
+
+  "bus": [
+    "bus"
+  ],
+
+  "roads": [
+    "road",
+    "street"
+  ],
+
+  "bicycles": [
+    "bicycle",
+    "bicycle wheel"
+  ],
+
+  "mountains or hills": [
+    "mountain",
+    "hill",
+    "highland",
+    "ecosystem"
+  ],
+
+  "statues": [
+    "statue",
+    "structure",
+    "art",
+    "artwork"
+  ],
+
+  "motorcycles": [
+    "motorcycle",
+    "motorcycling",
+    "chopper",
+    "scooter"
+  ],
+
+  "pedestrian crossings": [
+    "walkway"
+  ],
+
+  "a fire hydrant": [
+    "fire hydrant",
+    "red"
+  ],
+
+  "boats": [
+    "boat"
+  ]
+}

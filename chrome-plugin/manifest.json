@@ -1,0 +1,27 @@
+{
+  "manifest_version": 2,
+
+  "name": "reCaptcha Solver",
+  "description": "This extension allows the user to let Googles solve their own reCaptcha with their Vision API.",
+  "version": "1.0",
+
+  "browser_action": {
+    "default_icon": "icon.png"
+  },
+
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*/*"],
+      "js": ["jquery.js", "solver.js"],
+      "all_frames": true
+    }
+  ],
+  "permissions": [
+    "activeTab",
+    "background",
+    "*://*.google.com/*"
+  ]
+}
