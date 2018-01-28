@@ -1,21 +1,13 @@
 function clickNotRobot() {
-  // console.log("Try to click on the checkbox \"I'm not a robot\"...")
-
   var checkbox = $('.recaptcha-checkbox')
   if (checkbox.length) {
     checkbox.click()
     console.log("✅ Checkbox was clicked!")
-  } else {
-    // console.log("❌ Checkbox not found!")
   }
 }
 
 function clickReload(callback) {
-  var reload = $('.reload-button-holder button')
-  if (reload.length) {
-    reload.click()
-    setTimeout(callback, 1000)
-  }
+  $('.reload-button-holder button').click()
 }
 
 function clickValidate() {
@@ -26,8 +18,6 @@ function clickValidate() {
 }
 
 function getCaptchaUrl() {
-  // console.log("Try to find the reCaptcha image...")
-
   var image = $('img[class^=rc-image-tile-]')
   if (image.length) {
     console.log("✅ reCaptcha image was found!")
@@ -39,8 +29,6 @@ function getCaptchaUrl() {
 }
 
 function getTerm() {
-  // console.log("Try to find the term...")
-
   var container = $('[class^=rc-imageselect-desc]')
   if (container.length) {
     var term = container.find('strong').html()
@@ -58,25 +46,9 @@ function parseTerm(term, whitelist) {
   } else {
     return terms
   }
-
-  // if (whitelist[term] && whitelist[term] == true) {
-  //   return whitelist[term]
-  // } else {
-  //   return []
-  // }
-  // console.log(whitelist[term] && whitelist[term] == true)
-  // return whitelist[term]
-
-  // if (term in whitelist) {
-  //   return whitelist[term]
-  // } else {
-  //   return []
-  // }
 }
 
 function getGrid() {
-  // console.log("Try to find the grid...")
-
   var container = $('table[class^=rc-imageselect-table-]')
   if (container.length) {
     var className = container.attr('class')
@@ -95,36 +67,63 @@ function getGrid() {
   }
 }
 
-function recognize(whitelist) {
-  if (whitelist.lenght == 0) {
-    return
-  }
-
-  if (location.href.startsWith("https://www.google.com/recaptcha/api2/bframe?") == false) {
-    return
-  }
-
-  var term = getTerm()
-  var terms = parseTerm(term, whitelist)
-  if (terms.length == 0) {
-    setTimeout(clickReload, 1000)
-    setTimeout(function() {
-      recognize(whitelist)
-    }, 2000)
-  } else {
-    var captchaUrl = getCaptchaUrl()
-
-    var tableSize = getGrid()
-    if (tableSize) {
-      var rows = tableSize["rows"]
-      var columns = tableSize["columns"]
+function recognize() {
+  chrome.runtime.sendMessage({
+    from: "load_json"
+  }, function(whitelist) {
+    if (whitelist.lenght == 0) {
+      return
     }
 
-    if (captchaUrl, rows, columns, terms) {
-      console.log(terms)
-      request(captchaUrl, rows, columns, terms)
+    if (location.href.startsWith("https://www.google.com/recaptcha/api2/bframe?") == false) {
+      return
     }
-  }
+
+    var selectMore = $('.rc-imageselect-error-select-more')[0]
+    if (!isHidden(selectMore)) {
+      console.log("❌ Our answer was not enough, go to next")
+		clickReload()
+        setTimeout(recognize, 1500)
+      return
+    }
+
+    var checkNewImages = $('.rc-imageselect-error-dynamic-more')[0]
+    if (!isHidden(checkNewImages)) {
+      console.log("❌ Our answer was wrong, go to next")
+				clickReload()
+        setTimeout(recognize, 1500)
+      return;
+    }
+
+    var submitButton = $('button[id="recaptcha-verify-button"]')[0]
+    var submitButtonDisabled = submitButton.classList.contains("rc-button-default-disabled")
+    if (!submitButtonDisabled) {
+      var term = getTerm()
+      var terms = parseTerm(term, whitelist)
+      if (terms.length == 0) {
+        console.log("❌ Skipping this term out of bad experience ;)")
+				clickReload()
+        setTimeout(recognize, 1500)
+      } else {
+        var captchaUrl = getCaptchaUrl()
+
+        var tableSize = getGrid()
+        if (tableSize) {
+          var rows = tableSize["rows"]
+          var columns = tableSize["columns"]
+        }
+
+        if (captchaUrl, rows, columns, terms) {
+          console.log(terms)
+          request(captchaUrl, rows, columns, terms)
+        } else {
+          console.log("error");
+        }
+      }
+	  return
+    }
+    console.log("✅ We are done, it was a pleasure!")
+  });
 }
 
 function clickTile(row, column) {
@@ -140,9 +139,9 @@ function request(url, rows, columns, terms) {
 
   var getUrlParameter = function getUrlParameter(url, sParam) {
     var sPageURL = decodeURIComponent(url),
-    sURLVariables = sPageURL.split(/\?|&/),
-    sParameterName,
-    i;
+      sURLVariables = sPageURL.split(/\?|&/),
+      sParameterName,
+      i;
     for (i = 0; i < sURLVariables.length; i++) {
       sParameterName = sURLVariables[i].split('=');
       if (sParameterName[0] === sParam) {
@@ -161,17 +160,23 @@ function request(url, rows, columns, terms) {
     console.log(data)
     //var jsonData = jQuery.parseJSON(data)
     data.forEach(function(obj) {
-      if(obj.isCorrectImage) {
+      if (obj.isCorrectImage) {
         clickTile(obj.row, obj.column)
       }
     })
-    setTimeout(clickValidate, 1000)
+    setTimeout(clickValidate, 3000)
+    setTimeout(recognize, 4000)
   })
 }
 
-chrome.runtime.sendMessage({from: "load_json"}, function(response) {
-  clickNotRobot()
-  setTimeout(function() { recognize(response) }, 1000)
-});
+function isHidden(el) {
+  if (el == null) {
+    return true;
+  }
+  return window.getComputedStyle(el).display === 'none'
+}
 
-
+clickNotRobot()
+setTimeout(function() {
+  recognize()
+}, 1500)
